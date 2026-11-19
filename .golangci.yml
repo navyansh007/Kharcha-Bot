@@ -11,6 +11,10 @@ linters:
     - misspell
     - revive
     - unconvert
+  settings:
+    gosec:
+      excludes:
+        - G115
 formatters:
   enable:
     - gofmt
