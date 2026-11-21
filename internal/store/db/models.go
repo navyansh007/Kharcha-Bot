@@ -17,6 +17,30 @@ type Chat struct {
 	CreatedAt time.Time
 }
 
+type GroupEntry struct {
+	TxnID  int64
+	UserID int64
+	Amount money.Paise
+}
+
+type GroupMember struct {
+	ChatID   int64
+	UserID   int64
+	JoinedAt time.Time
+	LeftAt   *time.Time
+}
+
+type GroupTxn struct {
+	ID          int64
+	ChatID      int64
+	Kind        string
+	CreatedBy   int64
+	Description string
+	Total       money.Paise
+	ReversesID  *int64
+	CreatedAt   time.Time
+}
+
 type PersonalExpense struct {
 	ID          int64
 	UserID      int64

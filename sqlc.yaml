@@ -21,3 +21,7 @@ sql:
             go_type: time.Time
           - column: personal_expenses.amount
             go_type: github.com/navyansh007/kharcha-bot/internal/money.Paise
+          - column: group_txns.total
+            go_type: github.com/navyansh007/kharcha-bot/internal/money.Paise
+          - column: group_entries.amount
+            go_type: github.com/navyansh007/kharcha-bot/internal/money.Paise
