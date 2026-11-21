@@ -8,7 +8,7 @@ import (
 )
 
 func TestHealthz(t *testing.T) {
-	h := NewHandler(slog.New(slog.DiscardHandler))
+	h := NewHandler(Options{Logger: slog.New(slog.DiscardHandler)})
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
 

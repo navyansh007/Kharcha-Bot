@@ -18,17 +18,26 @@ const (
 	shutdownTimeout = 15 * time.Second
 )
 
+// Options selects the routes served by NewHandler. Nil routes are not registered.
+type Options struct {
+	Logger  *slog.Logger
+	Webhook *Webhook
+}
+
 // NewHandler builds the router with the common middleware and routes.
-func NewHandler(logger *slog.Logger) http.Handler {
+func NewHandler(opts Options) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
-	r.Use(logRequests(logger))
-	r.Use(recoverPanics(logger))
+	r.Use(logRequests(opts.Logger))
+	r.Use(recoverPanics(opts.Logger))
 	r.Use(middleware.RequestSize(maxBodyBytes))
 
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})
+	if wh := opts.Webhook; wh != nil {
+		r.Post("/webhook/"+wh.PathToken, wh.handler(opts.Logger))
+	}
 	return r
 }
 

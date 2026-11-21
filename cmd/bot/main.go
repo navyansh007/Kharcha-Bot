@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -32,9 +31,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if cfg.Mode != config.ModePolling {
-		return errors.New("only polling mode is supported")
-	}
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.LogLevel}))
 	slog.SetDefault(logger)
 
@@ -62,13 +58,24 @@ func run() error {
 		MaxExpense:  money.Paise(cfg.MaxExpensePaise),
 	})
 
+	routes := httpserver.Options{Logger: logger}
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	defer stop()
-	wg.Go(func() { b.Poll(ctx) })
+
+	switch cfg.Mode {
+	case config.ModeWebhook:
+		routes.Webhook = &httpserver.Webhook{
+			PathToken: cfg.WebhookPathToken,
+			Secret:    cfg.WebhookSecret,
+			Updates:   b,
+		}
+	default:
+		wg.Go(func() { b.Poll(ctx) })
+	}
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
-	return httpserver.Run(ctx, addr, httpserver.NewHandler(logger), logger)
+	return httpserver.Run(ctx, addr, httpserver.NewHandler(routes), logger)
 }
 
 func newTelegramClient(cfg config.Config, logger *slog.Logger) telegram.Client {
