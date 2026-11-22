@@ -19,17 +19,22 @@ const (
 	chatSuperGroup = "supergroup"
 )
 
-const helpText = `<b>Kharcha</b> keeps track of what you spend.
+const helpText = `<b>Kharcha</b> keeps track of what you spend and what your friends owe you.
 
-<b>Log an expense</b> (in a private chat)
+<b>In a private chat</b>
 <code>120 chai</code>
 <code>450 uber to airport</code>
 <code>900 shoes #shopping</code>
+/today, /week, /month show where it went
 
-<b>See where it went</b>
-/today, /week, /month
+<b>In a group</b>
+/join puts you in the splits
+<code>/split 900 dinner</code> splits between everyone
+<code>/split 900 dinner @a @b</code> splits with them and you
+<code>/split 900 dinner @a:300 @b:600</code> exact shares
+/balance shows who owes whom
+<code>/settle @a 300</code> records a payment
 
-<b>Fix a mistake</b>
 /undo removes your last entry (within 10 minutes)`
 
 type request struct {
@@ -52,6 +57,9 @@ func (b *Bot) handleMessage(ctx context.Context, q *db.Queries, msg *telegram.Me
 	if !private && !strings.HasPrefix(msg.Text, "/") {
 		return res, nil
 	}
+	if msg.LeftChatMember != nil && !private {
+		return res, forget(ctx, q, msg.Chat.ID, msg.LeftChatMember.ID)
+	}
 	if msg.Text == "" {
 		return res, nil
 	}
@@ -62,6 +70,12 @@ func (b *Bot) handleMessage(ctx context.Context, q *db.Queries, msg *telegram.Me
 	}
 	if err := remember(ctx, q, *msg.From, msg.Chat); err != nil {
 		return res, err
+	}
+	if !private {
+		err := q.UpsertMember(ctx, db.UpsertMemberParams{ChatID: msg.Chat.ID, UserID: msg.From.ID})
+		if err != nil {
+			return res, fmt.Errorf("save member: %w", err)
+		}
 	}
 
 	var usageErr *parser.UsageError
@@ -91,10 +105,32 @@ func (b *Bot) execute(ctx context.Context, q *db.Queries, req request, res *resp
 	case parser.KindToday, parser.KindWeek, parser.KindMonth:
 		return b.totals(ctx, q, req, res)
 	case parser.KindUndo:
-		return b.undoLast(ctx, q, req, res)
+		if req.private() {
+			return b.undoLast(ctx, q, req, res)
+		}
+		return b.undoLastTxn(ctx, q, req, res)
+	case parser.KindJoin, parser.KindSplit, parser.KindBalance, parser.KindSettle:
+		return b.executeGroup(ctx, q, req, res)
 	default:
 		res.reply(helpText)
 		return nil
+	}
+}
+
+func (b *Bot) executeGroup(ctx context.Context, q *db.Queries, req request, res *response) error {
+	if req.private() {
+		res.reply(groupOnlyText)
+		return nil
+	}
+	switch req.command.Kind {
+	case parser.KindSplit:
+		return b.split(ctx, q, req, res)
+	case parser.KindBalance:
+		return b.balance(ctx, q, req, res)
+	case parser.KindSettle:
+		return b.settle(ctx, q, req, res)
+	default:
+		return b.join(ctx, q, req, res)
 	}
 }
 
@@ -118,6 +154,13 @@ func remember(ctx context.Context, q *db.Queries, user telegram.User, chat teleg
 	})
 	if err != nil {
 		return fmt.Errorf("save chat: %w", err)
+	}
+	return nil
+}
+
+func forget(ctx context.Context, q *db.Queries, chatID, userID int64) error {
+	if err := q.MarkMemberLeft(ctx, db.MarkMemberLeftParams{ChatID: chatID, UserID: userID}); err != nil {
+		return fmt.Errorf("remove member: %w", err)
 	}
 	return nil
 }

@@ -17,6 +17,10 @@ const privateOnlyText = "That works only in a private chat with me."
 const undoExpensePrefix = "pundo"
 
 func (b *Bot) logExpense(ctx context.Context, q *db.Queries, req request, res *response) error {
+	if !req.private() {
+		res.reply(privateOnlyText)
+		return nil
+	}
 	name := req.command.Tag
 	if name == "" {
 		name = category.Detect(req.command.Description)
@@ -59,10 +63,6 @@ func (b *Bot) totals(ctx context.Context, q *db.Queries, req request, res *respo
 }
 
 func (b *Bot) undoLast(ctx context.Context, q *db.Queries, req request, res *response) error {
-	if !req.private() {
-		res.reply(privateOnlyText)
-		return nil
-	}
 	expense, err := ledger.UndoLastExpense(ctx, q, req.user.ID, req.now)
 	if text, ok := undoFailure(err); ok {
 		res.reply(text)

@@ -30,3 +30,51 @@ func Totals(title string, totals []ledger.CategoryTotal) string {
 	fmt.Fprintf(&b, "\n<b>Total: %s</b>", sum)
 	return b.String()
 }
+
+// TransferLine renders one suggested payment.
+func TransferLine(t ledger.Transfer) string {
+	return fmt.Sprintf("%s → %s: %s", Escape(t.From.Name), Escape(t.To.Name), t.Amount)
+}
+
+// Transfers renders the payments that would settle a group.
+func Transfers(title string, transfers []ledger.Transfer) string {
+	if len(transfers) == 0 {
+		return "All settled up. 🎉"
+	}
+	lines := []string{fmt.Sprintf("<b>%s</b>", Escape(title))}
+	for _, t := range transfers {
+		lines = append(lines, TransferLine(t))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// NamedShare is a participant's part of a split.
+type NamedShare struct {
+	Name   string
+	Amount money.Paise
+}
+
+// Split renders the confirmation of a shared expense.
+func Split(description string, total money.Paise, payer string, shares []NamedShare) string {
+	header := fmt.Sprintf("🧾 <b>%s</b>, %s split %d %s", Escape(description), total, len(shares), plural(len(shares), "way"))
+	even := true
+	for _, s := range shares {
+		even = even && s.Amount == shares[0].Amount
+	}
+	if even {
+		header += fmt.Sprintf(" (%s each)", shares[0].Amount)
+	}
+
+	lines := []string{header + ". Paid by " + Escape(payer) + "."}
+	for _, s := range shares {
+		lines = append(lines, fmt.Sprintf("• %s: %s", Escape(s.Name), s.Amount))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func plural(n int, word string) string {
+	if n == 1 {
+		return word
+	}
+	return word + "s"
+}

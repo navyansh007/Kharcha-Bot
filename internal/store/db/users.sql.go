@@ -9,6 +9,26 @@ import (
 	"context"
 )
 
+const getUser = `-- name: GetUser :one
+SELECT id, username, first_name, upi_vpa, daily_summary, blocked_at, created_at FROM users
+WHERE id = $1
+`
+
+func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, getUser, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.FirstName,
+		&i.UpiVpa,
+		&i.DailySummary,
+		&i.BlockedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const upsertChat = `-- name: UpsertChat :exec
 INSERT INTO chats (id, kind, title)
 VALUES ($1, $2, $3)

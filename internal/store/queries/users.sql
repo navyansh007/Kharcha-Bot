@@ -12,3 +12,7 @@ VALUES ($1, $2, $3)
 ON CONFLICT (id) DO UPDATE
 SET kind = excluded.kind,
     title = excluded.title;
+
+-- name: GetUser :one
+SELECT * FROM users
+WHERE id = $1;

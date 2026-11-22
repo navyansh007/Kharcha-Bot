@@ -7,6 +7,7 @@ import (
 
 	"github.com/navyansh007/kharcha-bot/internal/format"
 	"github.com/navyansh007/kharcha-bot/internal/ledger"
+	"github.com/navyansh007/kharcha-bot/internal/money"
 	"github.com/navyansh007/kharcha-bot/internal/store/db"
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
 )
@@ -28,6 +29,10 @@ func (b *Bot) handleCallback(ctx context.Context, q *db.Queries, cb *telegram.Ca
 	switch {
 	case ok && action == undoExpensePrefix && len(ids) == 1:
 		return res, b.undoExpenseButton(ctx, q, cb, ids[0], &res)
+	case ok && action == undoTxnPrefix && len(ids) == 1:
+		return res, b.undoTxnButton(ctx, q, cb, ids[0], &res)
+	case ok && action == settlePrefix && len(ids) == 3 && ids[2] > 0:
+		return res, b.settleButton(ctx, q, cb, ids[0], ids[1], money.Paise(ids[2]), &res)
 	default:
 		res.command = "callback_unknown"
 		res.answer.Text = "This button no longer works."
