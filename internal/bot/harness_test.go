@@ -148,6 +148,7 @@ func private(u telegram.User) telegram.Chat {
 }
 
 var (
-	asha = telegram.User{ID: 101, FirstName: "Asha", Username: "asha"}
-	ravi = telegram.User{ID: 102, FirstName: "Ravi", Username: "ravi"}
+	asha  = telegram.User{ID: 101, FirstName: "Asha", Username: "asha"}
+	ravi  = telegram.User{ID: 102, FirstName: "Ravi", Username: "ravi"}
+	meera = telegram.User{ID: 103, FirstName: "Meera", Username: "meera"}
 )
