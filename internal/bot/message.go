@@ -54,11 +54,11 @@ func (b *Bot) handleMessage(ctx context.Context, q *db.Queries, msg *telegram.Me
 		return res, nil
 	}
 	private := msg.Chat.Type == chatPrivate
-	if !private && !strings.HasPrefix(msg.Text, "/") {
-		return res, nil
-	}
 	if msg.LeftChatMember != nil && !private {
 		return res, forget(ctx, q, msg.Chat.ID, msg.LeftChatMember.ID)
+	}
+	if !private && !strings.HasPrefix(msg.Text, "/") {
+		return res, nil
 	}
 	if msg.Text == "" {
 		return res, nil
