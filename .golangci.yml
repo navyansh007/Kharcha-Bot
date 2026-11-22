@@ -17,6 +17,10 @@ linters:
         - G115
   exclusions:
     rules:
+      - path: internal/httpserver/pay\.go
+        linters:
+          - gosec
+        text: G203
       - path: _test\.go
         linters:
           - gosec

@@ -11,6 +11,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"github.com/navyansh007/kharcha-bot/internal/upi"
 )
 
 const (
@@ -22,6 +24,7 @@ const (
 type Options struct {
 	Logger  *slog.Logger
 	Webhook *Webhook
+	Pay     *upi.Signer
 }
 
 // NewHandler builds the router with the common middleware and routes.
@@ -37,6 +40,9 @@ func NewHandler(opts Options) http.Handler {
 	})
 	if wh := opts.Webhook; wh != nil {
 		r.Post("/webhook/"+wh.PathToken, wh.handler(opts.Logger))
+	}
+	if opts.Pay != nil {
+		r.Get("/pay/{token}", payHandler(opts.Pay, opts.Logger))
 	}
 	return r
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/navyansh007/kharcha-bot/internal/money"
 	"github.com/navyansh007/kharcha-bot/internal/store"
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
+	"github.com/navyansh007/kharcha-bot/internal/upi"
 )
 
 func main() {
@@ -49,6 +50,11 @@ func run() error {
 		return fmt.Errorf("identify bot: %w", err)
 	}
 
+	var signer *upi.Signer
+	if cfg.UPILinkSecret != "" && cfg.PublicBaseURL != "" {
+		signer = upi.NewSigner(cfg.UPILinkSecret, cfg.PublicBaseURL)
+	}
+
 	b := bot.New(bot.Options{
 		Pool:        pool,
 		Client:      client,
@@ -58,7 +64,7 @@ func run() error {
 		MaxExpense:  money.Paise(cfg.MaxExpensePaise),
 	})
 
-	routes := httpserver.Options{Logger: logger}
+	routes := httpserver.Options{Logger: logger, Pay: signer}
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	defer stop()
