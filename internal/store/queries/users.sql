@@ -16,3 +16,8 @@ SET kind = excluded.kind,
 -- name: GetUser :one
 SELECT * FROM users
 WHERE id = $1;
+
+-- name: SetUserVPA :exec
+UPDATE users
+SET upi_vpa = sqlc.arg(vpa)::TEXT
+WHERE id = sqlc.arg(id);

@@ -15,6 +15,7 @@ import (
 	"github.com/navyansh007/kharcha-bot/internal/store"
 	"github.com/navyansh007/kharcha-bot/internal/store/db"
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
+	"github.com/navyansh007/kharcha-bot/internal/upi"
 )
 
 const (
@@ -22,7 +23,8 @@ const (
 	maxRetryDelay = 3 * time.Second
 )
 
-// Options configures a Bot. Now may be nil, in which case time.Now is used.
+// Options configures a Bot. UPI may be nil to disable payment links, and Now may
+// be nil to use time.Now.
 type Options struct {
 	Pool        *pgxpool.Pool
 	Client      telegram.Client
@@ -30,6 +32,7 @@ type Options struct {
 	Location    *time.Location
 	BotUsername string
 	MaxExpense  money.Paise
+	UPI         *upi.Signer
 	Now         func() time.Time
 }
 
@@ -40,6 +43,7 @@ type Bot struct {
 	logger *slog.Logger
 	loc    *time.Location
 	parser parser.Parser
+	upi    *upi.Signer
 	now    func() time.Time
 }
 
@@ -55,6 +59,7 @@ func New(opts Options) *Bot {
 		logger: opts.Logger,
 		loc:    opts.Location,
 		parser: parser.Parser{MaxAmount: opts.MaxExpense, BotUsername: opts.BotUsername},
+		upi:    opts.UPI,
 		now:    now,
 	}
 }

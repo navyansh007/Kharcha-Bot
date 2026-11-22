@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/navyansh007/kharcha-bot/internal/parser"
 	"github.com/navyansh007/kharcha-bot/internal/store/db"
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
+	"github.com/navyansh007/kharcha-bot/internal/upi"
 )
 
 const (
@@ -168,12 +170,31 @@ func (b *Bot) balance(ctx context.Context, q *db.Queries, req request, res *resp
 
 	var rows [][]telegram.InlineKeyboardButton
 	for _, t := range transfers {
+		pay, err := b.payButton(t, req.chat.Title, req.now)
+		if err != nil {
+			return err
+		}
+		if pay != nil {
+			rows = append(rows, row(*pay))
+		}
 		label := fmt.Sprintf("Mark settled: %s → %s %s", t.From.Name, t.To.Name, t.Amount)
 		data := fmt.Sprintf("%s:%d:%d:%d", settlePrefix, t.From.UserID, t.To.UserID, t.Amount)
 		rows = append(rows, row(button(label, data)))
 	}
 	res.reply(format.Transfers("Who owes whom", transfers), rows...)
 	return nil
+}
+
+func (b *Bot) payButton(t ledger.Transfer, note string, now time.Time) (*telegram.InlineKeyboardButton, error) {
+	if b.upi == nil || t.To.VPA == "" {
+		return nil, nil
+	}
+	link, err := b.upi.Link(upi.Payment{VPA: t.To.VPA, Name: t.To.Name, Amount: t.Amount, Note: note}, now)
+	if err != nil {
+		return nil, fmt.Errorf("payment link: %w", err)
+	}
+	label := fmt.Sprintf("Pay via UPI: %s → %s %s", t.From.Name, t.To.Name, t.Amount)
+	return &telegram.InlineKeyboardButton{Text: label, URL: link}, nil
 }
 
 func (b *Bot) settle(ctx context.Context, q *db.Queries, req request, res *response) error {

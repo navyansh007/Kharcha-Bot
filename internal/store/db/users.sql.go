@@ -29,6 +29,22 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 	return i, err
 }
 
+const setUserVPA = `-- name: SetUserVPA :exec
+UPDATE users
+SET upi_vpa = $1::TEXT
+WHERE id = $2
+`
+
+type SetUserVPAParams struct {
+	Vpa string
+	ID  int64
+}
+
+func (q *Queries) SetUserVPA(ctx context.Context, arg SetUserVPAParams) error {
+	_, err := q.db.Exec(ctx, setUserVPA, arg.Vpa, arg.ID)
+	return err
+}
+
 const upsertChat = `-- name: UpsertChat :exec
 INSERT INTO chats (id, kind, title)
 VALUES ($1, $2, $3)

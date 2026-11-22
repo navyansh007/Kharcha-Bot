@@ -35,6 +35,8 @@ const helpText = `<b>Kharcha</b> keeps track of what you spend and what your fri
 /balance shows who owes whom
 <code>/settle @a 300</code> records a payment
 
+<code>/setupi name@okaxis</code> lets others pay you by UPI
+
 /undo removes your last entry (within 10 minutes)`
 
 type request struct {
@@ -111,6 +113,8 @@ func (b *Bot) execute(ctx context.Context, q *db.Queries, req request, res *resp
 		return b.undoLastTxn(ctx, q, req, res)
 	case parser.KindJoin, parser.KindSplit, parser.KindBalance, parser.KindSettle:
 		return b.executeGroup(ctx, q, req, res)
+	case parser.KindSetUPI:
+		return b.setUPI(ctx, q, req, res)
 	default:
 		res.reply(helpText)
 		return nil

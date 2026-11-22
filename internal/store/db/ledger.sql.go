@@ -39,7 +39,7 @@ func (q *Queries) GetGroupTxn(ctx context.Context, arg GetGroupTxnParams) (Group
 }
 
 const groupBalances = `-- name: GroupBalances :many
-SELECT u.id AS user_id, u.first_name, SUM(e.amount)::BIGINT AS balance
+SELECT u.id AS user_id, u.first_name, u.upi_vpa, SUM(e.amount)::BIGINT AS balance
 FROM group_entries e
 JOIN group_txns t ON t.id = e.txn_id
 JOIN users u ON u.id = e.user_id
@@ -52,6 +52,7 @@ ORDER BY u.id
 type GroupBalancesRow struct {
 	UserID    int64
 	FirstName string
+	UpiVpa    *string
 	Balance   int64
 }
 
@@ -64,7 +65,12 @@ func (q *Queries) GroupBalances(ctx context.Context, chatID int64) ([]GroupBalan
 	var items []GroupBalancesRow
 	for rows.Next() {
 		var i GroupBalancesRow
-		if err := rows.Scan(&i.UserID, &i.FirstName, &i.Balance); err != nil {
+		if err := rows.Scan(
+			&i.UserID,
+			&i.FirstName,
+			&i.UpiVpa,
+			&i.Balance,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

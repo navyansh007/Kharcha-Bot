@@ -15,6 +15,7 @@ import (
 type Balance struct {
 	UserID int64
 	Name   string
+	VPA    string
 	Amount money.Paise
 }
 
@@ -34,6 +35,9 @@ func Balances(ctx context.Context, q *db.Queries, chatID int64) ([]Balance, erro
 	balances := make([]Balance, len(rows))
 	for i, row := range rows {
 		balances[i] = Balance{UserID: row.UserID, Name: row.FirstName, Amount: money.Paise(row.Balance)}
+		if row.UpiVpa != nil {
+			balances[i].VPA = *row.UpiVpa
+		}
 	}
 	return balances, nil
 }

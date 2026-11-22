@@ -37,7 +37,7 @@ WHERE txn_id = $1
 ORDER BY user_id;
 
 -- name: GroupBalances :many
-SELECT u.id AS user_id, u.first_name, SUM(e.amount)::BIGINT AS balance
+SELECT u.id AS user_id, u.first_name, u.upi_vpa, SUM(e.amount)::BIGINT AS balance
 FROM group_entries e
 JOIN group_txns t ON t.id = e.txn_id
 JOIN users u ON u.id = e.user_id

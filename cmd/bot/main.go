@@ -62,6 +62,7 @@ func run() error {
 		Location:    cfg.Location,
 		BotUsername: me.Username,
 		MaxExpense:  money.Paise(cfg.MaxExpensePaise),
+		UPI:         signer,
 	})
 
 	routes := httpserver.Options{Logger: logger, Pay: signer}
