@@ -28,6 +28,7 @@ type Chat struct {
 	Kind      string
 	Title     *string
 	CreatedAt time.Time
+	RemovedAt *time.Time
 }
 
 type GroupEntry struct {
@@ -52,6 +53,18 @@ type GroupTxn struct {
 	Total       money.Paise
 	ReversesID  *int64
 	CreatedAt   time.Time
+}
+
+type Outbox struct {
+	ID        int64
+	ChatID    int64
+	Text      string
+	DedupeKey *string
+	Status    string
+	Attempts  int32
+	NextTryAt time.Time
+	LastError *string
+	CreatedAt time.Time
 }
 
 type PersonalExpense struct {

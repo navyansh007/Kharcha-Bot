@@ -11,7 +11,8 @@ INSERT INTO chats (id, kind, title)
 VALUES ($1, $2, $3)
 ON CONFLICT (id) DO UPDATE
 SET kind = excluded.kind,
-    title = excluded.title;
+    title = excluded.title,
+    removed_at = NULL;
 
 -- name: GetUser :one
 SELECT * FROM users
@@ -21,3 +22,13 @@ WHERE id = $1;
 UPDATE users
 SET upi_vpa = sqlc.arg(vpa)::TEXT
 WHERE id = sqlc.arg(id);
+
+-- name: MarkUserBlocked :exec
+UPDATE users
+SET blocked_at = now()
+WHERE id = $1;
+
+-- name: MarkChatRemoved :exec
+UPDATE chats
+SET removed_at = now()
+WHERE id = $1;

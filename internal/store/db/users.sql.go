@@ -29,6 +29,28 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 	return i, err
 }
 
+const markChatRemoved = `-- name: MarkChatRemoved :exec
+UPDATE chats
+SET removed_at = now()
+WHERE id = $1
+`
+
+func (q *Queries) MarkChatRemoved(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markChatRemoved, id)
+	return err
+}
+
+const markUserBlocked = `-- name: MarkUserBlocked :exec
+UPDATE users
+SET blocked_at = now()
+WHERE id = $1
+`
+
+func (q *Queries) MarkUserBlocked(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markUserBlocked, id)
+	return err
+}
+
 const setUserVPA = `-- name: SetUserVPA :exec
 UPDATE users
 SET upi_vpa = $1::TEXT
@@ -50,7 +72,8 @@ INSERT INTO chats (id, kind, title)
 VALUES ($1, $2, $3)
 ON CONFLICT (id) DO UPDATE
 SET kind = excluded.kind,
-    title = excluded.title
+    title = excluded.title,
+    removed_at = NULL
 `
 
 type UpsertChatParams struct {
