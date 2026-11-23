@@ -25,6 +25,7 @@ type Options struct {
 	Logger  *slog.Logger
 	Webhook *Webhook
 	Pay     *upi.Signer
+	Cron    *Cron
 }
 
 // NewHandler builds the router with the common middleware and routes.
@@ -43,6 +44,9 @@ func NewHandler(opts Options) http.Handler {
 	}
 	if opts.Pay != nil {
 		r.Get("/pay/{token}", payHandler(opts.Pay, opts.Logger))
+	}
+	if c := opts.Cron; c != nil {
+		r.Post("/cron/{job}", c.handler(opts.Logger))
 	}
 	return r
 }

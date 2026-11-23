@@ -13,8 +13,10 @@ import (
 
 	"github.com/navyansh007/kharcha-bot/internal/bot"
 	"github.com/navyansh007/kharcha-bot/internal/config"
+	"github.com/navyansh007/kharcha-bot/internal/cron"
 	"github.com/navyansh007/kharcha-bot/internal/httpserver"
 	"github.com/navyansh007/kharcha-bot/internal/money"
+	"github.com/navyansh007/kharcha-bot/internal/outbox"
 	"github.com/navyansh007/kharcha-bot/internal/store"
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
 	"github.com/navyansh007/kharcha-bot/internal/upi"
@@ -66,6 +68,14 @@ func run() error {
 	})
 
 	routes := httpserver.Options{Logger: logger, Pay: signer}
+	if cfg.CronSecret != "" {
+		drainer := outbox.NewDrainer(pool, cron.TelegramSender{Client: client}, logger)
+		routes.Cron = &httpserver.Cron{
+			Secret: cfg.CronSecret,
+			Jobs:   cron.NewRunner(pool, drainer, cfg.Location, logger, nil),
+		}
+	}
+
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	defer stop()
