@@ -19,6 +19,12 @@ sql:
               pointer: true
           - db_type: pg_catalog.timestamptz
             go_type: time.Time
+          - db_type: date
+            go_type: time.Time
+          - db_type: pg_catalog.date
+            go_type: time.Time
+          - column: budgets.monthly
+            go_type: github.com/navyansh007/kharcha-bot/internal/money.Paise
           - column: personal_expenses.amount
             go_type: github.com/navyansh007/kharcha-bot/internal/money.Paise
           - column: group_txns.total

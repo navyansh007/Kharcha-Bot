@@ -10,6 +10,19 @@ import (
 	"github.com/navyansh007/kharcha-bot/internal/money"
 )
 
+type Budget struct {
+	UserID   int64
+	Category string
+	Monthly  money.Paise
+}
+
+type BudgetAlert struct {
+	UserID    int64
+	Category  string
+	Month     time.Time
+	Threshold int16
+}
+
 type Chat struct {
 	ID        int64
 	Kind      string

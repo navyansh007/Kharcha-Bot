@@ -6,6 +6,7 @@ import (
 	"html"
 	"strings"
 
+	"github.com/navyansh007/kharcha-bot/internal/budget"
 	"github.com/navyansh007/kharcha-bot/internal/ledger"
 	"github.com/navyansh007/kharcha-bot/internal/money"
 )
@@ -77,4 +78,13 @@ func plural(n int, word string) string {
 		return word
 	}
 	return word + "s"
+}
+
+// BudgetWarning renders a budget threshold warning.
+func BudgetWarning(w budget.Warning) string {
+	if w.Threshold >= 100 {
+		return fmt.Sprintf("🚨 You have used up your %s budget: %s of %s.", Escape(w.Category), w.Spent, w.Monthly)
+	}
+	return fmt.Sprintf("⚠️ You have crossed %d%% of your %s budget: %s of %s.",
+		w.Threshold, Escape(w.Category), w.Spent, w.Monthly)
 }

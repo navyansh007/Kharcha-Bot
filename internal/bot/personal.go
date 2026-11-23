@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/navyansh007/kharcha-bot/internal/budget"
 	"github.com/navyansh007/kharcha-bot/internal/category"
 	"github.com/navyansh007/kharcha-bot/internal/format"
 	"github.com/navyansh007/kharcha-bot/internal/ledger"
@@ -37,7 +38,27 @@ func (b *Bot) logExpense(ctx context.Context, q *db.Queries, req request, res *r
 
 	text := fmt.Sprintf("✅ %s %s logged under %s.",
 		req.command.Amount, format.Escape(req.command.Description), format.Escape(name))
+	warning, err := budget.Check(ctx, q, req.user.ID, name, req.now, b.loc)
+	if err != nil {
+		return err
+	}
+	if warning != nil {
+		text += "\n\n" + format.BudgetWarning(*warning)
+	}
 	res.reply(text, row(button("Undo", fmt.Sprintf("%s:%d", undoExpensePrefix, id))))
+	return nil
+}
+
+func (b *Bot) setBudget(ctx context.Context, q *db.Queries, req request, res *response) error {
+	if !req.private() {
+		res.reply(privateOnlyText)
+		return nil
+	}
+	if err := budget.Set(ctx, q, req.user.ID, req.command.Category, req.command.Amount); err != nil {
+		return err
+	}
+	res.reply(fmt.Sprintf("Monthly budget for %s set to %s.",
+		format.Escape(req.command.Category), req.command.Amount))
 	return nil
 }
 
