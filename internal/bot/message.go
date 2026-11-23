@@ -27,6 +27,7 @@ const helpText = `<b>Kharcha</b> keeps track of what you spend and what your fri
 <code>900 shoes #shopping</code>
 /today, /week, /month show where it went
 <code>/budget food 3000</code> warns you at 80% and 100%
+/summary on sends you the day's total at 9 pm
 
 <b>In a group</b>
 /join puts you in the splits
@@ -116,6 +117,8 @@ func (b *Bot) execute(ctx context.Context, q *db.Queries, req request, res *resp
 		return b.executeGroup(ctx, q, req, res)
 	case parser.KindBudget:
 		return b.setBudget(ctx, q, req, res)
+	case parser.KindSummary:
+		return b.summary(ctx, q, req, res)
 	case parser.KindSetUPI:
 		return b.setUPI(ctx, q, req, res)
 	default:

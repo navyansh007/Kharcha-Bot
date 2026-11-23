@@ -118,6 +118,8 @@ func (b *Bot) dispatch(ctx context.Context, q *db.Queries, update telegram.Updat
 		return b.handleMessage(ctx, q, update.Message)
 	case update.CallbackQuery != nil:
 		return b.handleCallback(ctx, q, update.CallbackQuery)
+	case update.MyChatMember != nil:
+		return b.handleMembership(ctx, q, update.MyChatMember)
 	default:
 		return response{}, nil
 	}
