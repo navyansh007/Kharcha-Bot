@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/navyansh007/kharcha-bot/internal/metrics"
 	"github.com/navyansh007/kharcha-bot/internal/money"
 	"github.com/navyansh007/kharcha-bot/internal/parser"
 	"github.com/navyansh007/kharcha-bot/internal/store"
@@ -23,8 +24,8 @@ const (
 	maxRetryDelay = 3 * time.Second
 )
 
-// Options configures a Bot. UPI may be nil to disable payment links, and Now may
-// be nil to use time.Now.
+// Options configures a Bot. UPI may be nil to disable payment links, Metrics may
+// be nil, and Now may be nil to use time.Now.
 type Options struct {
 	Pool        *pgxpool.Pool
 	Client      telegram.Client
@@ -33,18 +34,20 @@ type Options struct {
 	BotUsername string
 	MaxExpense  money.Paise
 	UPI         *upi.Signer
+	Metrics     *metrics.Metrics
 	Now         func() time.Time
 }
 
 // Bot handles updates. It is safe for concurrent use.
 type Bot struct {
-	pool   *pgxpool.Pool
-	client telegram.Client
-	logger *slog.Logger
-	loc    *time.Location
-	parser parser.Parser
-	upi    *upi.Signer
-	now    func() time.Time
+	pool    *pgxpool.Pool
+	client  telegram.Client
+	logger  *slog.Logger
+	loc     *time.Location
+	parser  parser.Parser
+	upi     *upi.Signer
+	metrics *metrics.Metrics
+	now     func() time.Time
 }
 
 // New returns a Bot built from opts.
@@ -54,13 +57,14 @@ func New(opts Options) *Bot {
 		now = time.Now
 	}
 	return &Bot{
-		pool:   opts.Pool,
-		client: opts.Client,
-		logger: opts.Logger,
-		loc:    opts.Location,
-		parser: parser.Parser{MaxAmount: opts.MaxExpense, BotUsername: opts.BotUsername},
-		upi:    opts.UPI,
-		now:    now,
+		pool:    opts.Pool,
+		client:  opts.Client,
+		logger:  opts.Logger,
+		loc:     opts.Location,
+		parser:  parser.Parser{MaxAmount: opts.MaxExpense, BotUsername: opts.BotUsername},
+		upi:     opts.UPI,
+		metrics: opts.Metrics,
+		now:     now,
 	}
 }
 
@@ -99,6 +103,11 @@ func (b *Bot) HandleUpdate(ctx context.Context, update telegram.Update) error {
 		b.deliver(context.WithoutCancel(ctx), result)
 	}
 
+	command := result.command
+	if outcome != OutcomeProcessed {
+		command = ""
+	}
+	b.metrics.ObserveUpdate(string(outcome), command, time.Since(start))
 	b.logger.Info("update handled",
 		"update_id", update.UpdateID,
 		"chat_id", result.chatID,

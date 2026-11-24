@@ -5,19 +5,25 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 	_ "time/tzdata"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/navyansh007/kharcha-bot/internal/bot"
 	"github.com/navyansh007/kharcha-bot/internal/config"
 	"github.com/navyansh007/kharcha-bot/internal/cron"
 	"github.com/navyansh007/kharcha-bot/internal/httpserver"
+	"github.com/navyansh007/kharcha-bot/internal/metrics"
 	"github.com/navyansh007/kharcha-bot/internal/money"
 	"github.com/navyansh007/kharcha-bot/internal/outbox"
 	"github.com/navyansh007/kharcha-bot/internal/store"
+	"github.com/navyansh007/kharcha-bot/internal/store/db"
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
 	"github.com/navyansh007/kharcha-bot/internal/upi"
 )
@@ -46,7 +52,8 @@ func run() error {
 	}
 	defer pool.Close()
 
-	client := newTelegramClient(cfg, logger)
+	meter := metrics.New()
+	client := meter.Instrument(newTelegramClient(cfg, logger))
 	me, err := client.GetMe(ctx)
 	if err != nil {
 		return fmt.Errorf("identify bot: %w", err)
@@ -65,9 +72,14 @@ func run() error {
 		BotUsername: me.Username,
 		MaxExpense:  money.Paise(cfg.MaxExpensePaise),
 		UPI:         signer,
+		Metrics:     meter,
 	})
 
-	routes := httpserver.Options{Logger: logger, Pay: signer}
+	routes := httpserver.Options{Logger: logger, Pay: signer, Ready: pool}
+	if cfg.MetricsEnabled {
+		meter.GaugeFunc("outbox_pending", "Messages waiting to be sent.", pendingMessages(pool))
+		routes.Metrics = meter.Handler()
+	}
 	if cfg.CronSecret != "" {
 		drainer := outbox.NewDrainer(pool, cron.TelegramSender{Client: client}, logger)
 		routes.Cron = &httpserver.Cron{
@@ -93,6 +105,19 @@ func run() error {
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	return httpserver.Run(ctx, addr, httpserver.NewHandler(routes), logger)
+}
+
+func pendingMessages(pool *pgxpool.Pool) func() float64 {
+	return func() float64 {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		n, err := db.New(pool).CountPendingMessages(ctx)
+		if err != nil {
+			slog.Warn("count pending messages", "error", err)
+			return math.NaN()
+		}
+		return float64(n)
+	}
 }
 
 func newTelegramClient(cfg config.Config, logger *slog.Logger) telegram.Client {
