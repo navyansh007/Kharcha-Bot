@@ -54,7 +54,7 @@ func NewHandler(opts Options) http.Handler {
 		r.Method(http.MethodGet, "/metrics", opts.Metrics)
 	}
 	if wh := opts.Webhook; wh != nil {
-		r.Post("/webhook/"+wh.PathToken, wh.handler(opts.Logger))
+		r.Post("/webhook/{token}", wh.handler(opts.Logger))
 	}
 	if opts.Pay != nil {
 		r.Get("/pay/{token}", payHandler(opts.Pay, opts.Logger))

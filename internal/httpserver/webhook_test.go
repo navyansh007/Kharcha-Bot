@@ -74,3 +74,17 @@ func TestWebhook(t *testing.T) {
 		})
 	}
 }
+
+func TestRequestLogHidesPathToken(t *testing.T) {
+	var logs strings.Builder
+	handler := NewHandler(Options{
+		Logger:  slog.New(slog.NewJSONHandler(&logs, nil)),
+		Webhook: &Webhook{PathToken: "pathtoken1", Secret: "s", Updates: &stubUpdates{}},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/webhook/pathtoken1", strings.NewReader(`{}`))
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	if strings.Contains(logs.String(), "pathtoken1") {
+		t.Errorf("log contains the path token: %s", logs.String())
+	}
+}

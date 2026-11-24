@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
 )
 
@@ -32,6 +34,10 @@ type Webhook struct {
 
 func (wh Webhook) handler(logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !secretEqual(chi.URLParam(r, "token"), wh.PathToken) {
+			http.NotFound(w, r)
+			return
+		}
 		if !secretEqual(r.Header.Get(webhookHeader), wh.Secret) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
