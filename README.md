@@ -162,6 +162,16 @@ k6 run -e WEBHOOK_PATH_TOKEN=... -e WEBHOOK_SECRET=... scripts/k6/webhook-load.j
 `BASE_URL`, `VUS` and `DURATION` can be set the same way. The script writes real
 rows, so never point it at production data.
 
+A local run on an Apple M2, with the bot on the host, Postgres 16 and k6 in
+Docker, `DB_MAX_CONNS=5`, dry run, 20 virtual users for 30 seconds:
+
+| Requests | Req/s | p50     | p95     | p99     | Failed | Rows written |
+| -------- | ----- | ------- | ------- | ------- | ------ | ------------ |
+| 42,598   | 1,419 | 13.7 ms | 16.9 ms | 20.8 ms | 0      | 42,598       |
+
+Replies were not sent to Telegram, so these numbers say nothing about a deployed
+instance.
+
 ## Deploying
 
 See [deploy/cloudrun.md](deploy/cloudrun.md) for Cloud Run with Neon.
