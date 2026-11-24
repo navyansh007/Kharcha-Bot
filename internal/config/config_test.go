@@ -27,6 +27,10 @@ func TestLoad(t *testing.T) {
 			name: "webhook complete",
 			env:  map[string]string{"BOT_MODE": "webhook", "WEBHOOK_SECRET": secret, "WEBHOOK_PATH_TOKEN": "pathtoken1"},
 		},
+		{
+			name: "webhook secret telegram would reject",
+			env:  map[string]string{"WEBHOOK_SECRET": secret + "+/="}, wantErr: "WEBHOOK_SECRET",
+		},
 		{name: "bad port", env: map[string]string{"PORT": "0"}, wantErr: "PORT"},
 		{name: "dry run needs no token", env: map[string]string{"TELEGRAM_BOT_TOKEN": "", "TELEGRAM_DRY_RUN": "true"}},
 	}

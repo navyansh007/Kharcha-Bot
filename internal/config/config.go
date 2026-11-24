@@ -19,7 +19,10 @@ const (
 
 const minSecretLength = 32
 
-var pathTokenPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{8,}$`)
+var (
+	pathTokenPattern     = regexp.MustCompile(`^[A-Za-z0-9_-]{8,}$`)
+	webhookSecretPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,256}$`)
+)
 
 // Config holds every setting the bot reads at startup.
 type Config struct {
@@ -96,6 +99,9 @@ func (c Config) validate(r *reader) {
 		if value != "" && len(value) < minSecretLength {
 			r.fail("%s must be at least %d characters", name, minSecretLength)
 		}
+	}
+	if c.WebhookSecret != "" && !webhookSecretPattern.MatchString(c.WebhookSecret) {
+		r.fail("WEBHOOK_SECRET may only contain letters, digits, _ and -, up to 256 characters")
 	}
 	if c.Mode == ModeWebhook {
 		if c.WebhookSecret == "" {

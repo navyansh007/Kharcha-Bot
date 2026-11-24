@@ -16,6 +16,10 @@ services:
       - key: PUBLIC_BASE_URL
         sync: false
       - key: WEBHOOK_SECRET
-        generateValue: true
+        sync: false
       - key: WEBHOOK_PATH_TOKEN
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: UPI_LINK_SECRET
         sync: false
