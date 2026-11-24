@@ -25,3 +25,45 @@ jobs:
       - run: go test -race ./...
       - run: go test -race -tags=integration ./...
       - run: docker build -f deploy/Dockerfile -t kharcha-bot .
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/kharcha/bot:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - run: gcloud auth configure-docker "${{ vars.GCP_REGION }}-docker.pkg.dev" --quiet
+      - run: docker build -f deploy/Dockerfile -t "$IMAGE" .
+      - run: docker push "$IMAGE"
+      - run: go run ./cmd/migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - id: run
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          service: kharcha-bot
+          region: ${{ vars.GCP_REGION }}
+          image: ${{ env.IMAGE }}
+      - name: Smoke test
+        env:
+          SERVICE_URL: ${{ steps.run.outputs.url }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 3 "$SERVICE_URL/readyz"
+          info=$(curl --fail --silent "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo")
+          echo "$info" | jq '.result | {pending_update_count, last_error_date, last_error_message}'
