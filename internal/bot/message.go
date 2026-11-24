@@ -39,7 +39,9 @@ const helpText = `<b>Kharcha</b> keeps track of what you spend and what your fri
 
 <code>/setupi name@okaxis</code> lets others pay you by UPI
 
-/undo removes your last entry (within 10 minutes)`
+/undo removes your last entry (within 10 minutes)
+/export sends your records as a CSV file
+/deleteme erases your personal data`
 
 type request struct {
 	chat    telegram.Chat
@@ -117,6 +119,10 @@ func (b *Bot) execute(ctx context.Context, q *db.Queries, req request, res *resp
 		return b.executeGroup(ctx, q, req, res)
 	case parser.KindBudget:
 		return b.setBudget(ctx, q, req, res)
+	case parser.KindExport:
+		return b.export(ctx, q, req, res)
+	case parser.KindDeleteMe:
+		return b.deleteMe(ctx, q, req, res)
 	case parser.KindSummary:
 		return b.summary(ctx, q, req, res)
 	case parser.KindSetUPI:
