@@ -34,6 +34,7 @@ type MessageEntity struct {
 // Message is a message in a chat.
 type Message struct {
 	MessageID      int64           `json:"message_id"`
+	Date           int64           `json:"date,omitempty"`
 	From           *User           `json:"from,omitempty"`
 	Chat           Chat            `json:"chat"`
 	Text           string          `json:"text,omitempty"`

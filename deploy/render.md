@@ -25,21 +25,30 @@ deploys a commit after its CI checks pass. Set:
 
 Then run `scripts/set-webhook.sh` with the same values.
 
-## Scheduled jobs
+## Sleeping
 
 Free services sleep after 15 minutes without traffic and take about a minute to
-wake, longer than a scheduler waits. Call `GET /healthz` two minutes before each
-job to wake the service.
+wake. No code runs while asleep, so the bot cannot say that it is waking. It
+adds "I was asleep" to the first reply instead, for messages that were sent
+before the process started. Button presses carry no send time and get no notice.
 
-Create these in cron-job.org with the time zone Asia/Kolkata. Jobs are `POST`
-requests with the header `Authorization: Bearer $CRON_SECRET`.
+## Scheduled jobs
 
-| Job                     | When                  | Wake up call          |
-| ----------------------- | --------------------- | --------------------- |
-| `/cron/daily-summary`   | 21:00 daily           | 20:58 daily           |
-| `/cron/weekly-reminder` | Sunday 11:00          | Sunday 10:58          |
-| `/cron/drain-outbox`    | hourly, at minute 30  | hourly, at minute 28  |
-| `/cron/cleanup`         | 03:00 daily           | 02:58 daily           |
+Create these in cron-job.org with the time zone Asia/Kolkata. All but the wake up
+call are `POST` requests with the header `Authorization: Bearer $CRON_SECRET`.
+
+| Request                 | When                          |
+| ----------------------- | ----------------------------- |
+| `GET /healthz`          | minutes 58 and 59 of each hour |
+| `/cron/drain-outbox`    | hourly, on the hour           |
+| `/cron/daily-summary`   | 21:00 daily                   |
+| `/cron/weekly-reminder` | Sunday 11:00                  |
+| `/cron/cleanup`         | 03:00 daily                   |
+
+The wake up call exists because a sleeping service takes longer to answer than
+the scheduler waits. The call at minute 58 may time out; the one at minute 59
+succeeds, which also stops the scheduler from disabling the job for repeated
+failures.
 
 Draining hourly rather than every few minutes lets the database suspend, which
 keeps it inside Neon's monthly compute allowance.

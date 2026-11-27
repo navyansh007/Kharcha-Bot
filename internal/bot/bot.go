@@ -52,6 +52,7 @@ type Bot struct {
 	metrics *metrics.Metrics
 	limits  *ratelimit.Guard
 	now     func() time.Time
+	notices *notices
 }
 
 // New returns a Bot built from opts.
@@ -70,6 +71,7 @@ func New(opts Options) *Bot {
 		metrics: opts.Metrics,
 		limits:  opts.Limits,
 		now:     now,
+		notices: newNotices(now()),
 	}
 }
 
@@ -114,7 +116,9 @@ func (b *Bot) HandleUpdate(ctx context.Context, update telegram.Update) error {
 	})
 	if err != nil {
 		outcome = OutcomeError
+		b.reportFailure(ctx, update)
 	} else {
+		b.announceWake(update, &result)
 		b.deliver(context.WithoutCancel(ctx), result)
 	}
 
