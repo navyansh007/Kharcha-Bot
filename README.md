@@ -134,6 +134,21 @@ handled inside the webhook request, and scheduled work is triggered over HTTP.
 Notifications go to an `outbox` table first and are drained with a rate limiter.
 Delivery there is at least once.
 
+## Rate limits
+
+| What                         | Limit                                  |
+| ---------------------------- | -------------------------------------- |
+| One sender                   | 10 at once, then 1 every 2 s, 500 a day |
+| One group                    | 20 at once, then 1 every 3 s           |
+| Everyone together            | 30 at once, then 5 a second            |
+| Failed webhook or cron auth  | 20 at once, then 1 a second            |
+| UPI pages                    | 20 at once, then 5 a second            |
+| `/readyz`                    | 3 at once, then 1 every 30 minutes     |
+
+A refused update is acknowledged, so Telegram does not send it again, and the
+sender is told at most once a minute. The limits are held in memory and assume a
+single instance.
+
 ## Testing
 
 ```sh
@@ -161,6 +176,9 @@ k6 run -e WEBHOOK_PATH_TOKEN=... -e WEBHOOK_SECRET=... scripts/k6/webhook-load.j
 
 `BASE_URL`, `VUS` and `DURATION` can be set the same way. The script writes real
 rows, so never point it at production data.
+
+Dry run also turns off the per user rate limits, which would otherwise refuse
+most of this traffic.
 
 A local run on an Apple M2, with the bot on the host, Postgres 16 and k6 in
 Docker, `DB_MAX_CONNS=5`, dry run, 20 virtual users for 30 seconds:

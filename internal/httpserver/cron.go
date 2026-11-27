@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/time/rate"
 
 	"github.com/navyansh007/kharcha-bot/internal/cron"
 )
@@ -27,11 +28,11 @@ type Cron struct {
 	Jobs   JobRunner
 }
 
-func (c Cron) handler(logger *slog.Logger) http.HandlerFunc {
+func (c Cron) handler(logger *slog.Logger, failures *rate.Limiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 		if !ok || !secretEqual(token, c.Secret) {
-			w.WriteHeader(http.StatusUnauthorized)
+			reject(w, failures, http.StatusUnauthorized)
 			return
 		}
 

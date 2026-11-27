@@ -22,6 +22,7 @@ import (
 	"github.com/navyansh007/kharcha-bot/internal/metrics"
 	"github.com/navyansh007/kharcha-bot/internal/money"
 	"github.com/navyansh007/kharcha-bot/internal/outbox"
+	"github.com/navyansh007/kharcha-bot/internal/ratelimit"
 	"github.com/navyansh007/kharcha-bot/internal/store"
 	"github.com/navyansh007/kharcha-bot/internal/store/db"
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
@@ -64,6 +65,11 @@ func run() error {
 		signer = upi.NewSigner(cfg.UPILinkSecret, cfg.PublicBaseURL)
 	}
 
+	var limits *ratelimit.Guard
+	if !cfg.DryRun {
+		limits = ratelimit.NewGuard()
+	}
+
 	b := bot.New(bot.Options{
 		Pool:        pool,
 		Client:      client,
@@ -73,6 +79,7 @@ func run() error {
 		MaxExpense:  money.Paise(cfg.MaxExpensePaise),
 		UPI:         signer,
 		Metrics:     meter,
+		Limits:      limits,
 	})
 
 	routes := httpserver.Options{Logger: logger, Pay: signer, Ready: pool}

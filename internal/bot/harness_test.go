@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/navyansh007/kharcha-bot/internal/bot"
+	"github.com/navyansh007/kharcha-bot/internal/ratelimit"
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
 	"github.com/navyansh007/kharcha-bot/internal/testdb"
 	"github.com/navyansh007/kharcha-bot/internal/upi"
@@ -49,6 +50,11 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
+	return newHarnessWithLimits(t, nil)
+}
+
+func newHarnessWithLimits(t *testing.T, limits *ratelimit.Guard) *harness {
+	t.Helper()
 	testdb.Reset(t, pool)
 	h := &harness{
 		t:    t,
@@ -62,6 +68,7 @@ func newHarness(t *testing.T) *harness {
 		Location:    time.FixedZone("IST", 5*60*60+30*60),
 		BotUsername: "KharchaBot",
 		MaxExpense:  10_000_000,
+		Limits:      limits,
 		UPI:         upi.NewSigner(strings.Repeat("k", 32), "https://bot.example"),
 		Now:         func() time.Time { return h.now },
 	})

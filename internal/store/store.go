@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -15,6 +16,8 @@ import (
 
 	"github.com/navyansh007/kharcha-bot/internal/store/db"
 )
+
+const maxIdleTime = 2 * time.Minute
 
 //go:embed migrations/*.sql
 var migrations embed.FS
@@ -26,6 +29,7 @@ func Open(ctx context.Context, url string, maxConns int32) (*pgxpool.Pool, error
 		return nil, fmt.Errorf("parse database url: %w", err)
 	}
 	cfg.MaxConns = maxConns
+	cfg.MaxConnIdleTime = maxIdleTime
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {

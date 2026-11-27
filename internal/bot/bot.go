@@ -13,6 +13,7 @@ import (
 	"github.com/navyansh007/kharcha-bot/internal/metrics"
 	"github.com/navyansh007/kharcha-bot/internal/money"
 	"github.com/navyansh007/kharcha-bot/internal/parser"
+	"github.com/navyansh007/kharcha-bot/internal/ratelimit"
 	"github.com/navyansh007/kharcha-bot/internal/store"
 	"github.com/navyansh007/kharcha-bot/internal/store/db"
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
@@ -24,8 +25,9 @@ const (
 	maxRetryDelay = 3 * time.Second
 )
 
-// Options configures a Bot. UPI may be nil to disable payment links, Metrics may
-// be nil, and Now may be nil to use time.Now.
+// Options configures a Bot. UPI may be nil to disable payment links, Limits may
+// be nil to accept everything, Metrics may be nil, and Now may be nil to use
+// time.Now.
 type Options struct {
 	Pool        *pgxpool.Pool
 	Client      telegram.Client
@@ -35,6 +37,7 @@ type Options struct {
 	MaxExpense  money.Paise
 	UPI         *upi.Signer
 	Metrics     *metrics.Metrics
+	Limits      *ratelimit.Guard
 	Now         func() time.Time
 }
 
@@ -47,6 +50,7 @@ type Bot struct {
 	parser  parser.Parser
 	upi     *upi.Signer
 	metrics *metrics.Metrics
+	limits  *ratelimit.Guard
 	now     func() time.Time
 }
 
@@ -64,6 +68,7 @@ func New(opts Options) *Bot {
 		parser:  parser.Parser{MaxAmount: opts.MaxExpense, BotUsername: opts.BotUsername},
 		upi:     opts.UPI,
 		metrics: opts.Metrics,
+		limits:  opts.Limits,
 		now:     now,
 	}
 }
@@ -73,9 +78,10 @@ type Outcome string
 
 // The possible outcomes of handling an update.
 const (
-	OutcomeProcessed Outcome = "processed"
-	OutcomeDuplicate Outcome = "duplicate"
-	OutcomeError     Outcome = "error"
+	OutcomeRateLimited Outcome = "rate_limited"
+	OutcomeProcessed   Outcome = "processed"
+	OutcomeDuplicate   Outcome = "duplicate"
+	OutcomeError       Outcome = "error"
 )
 
 // HandleUpdate applies the effects of an update exactly once and then sends the replies.
@@ -84,6 +90,15 @@ func (b *Bot) HandleUpdate(ctx context.Context, update telegram.Update) error {
 	start := time.Now()
 	outcome := OutcomeProcessed
 	var result response
+
+	if b.limits != nil {
+		if request, ok := limitedRequest(update); ok && !b.limits.Allow(request, b.now()) {
+			b.refuse(ctx, update, request)
+			b.metrics.ObserveUpdate(string(OutcomeRateLimited), "", time.Since(start))
+			b.logger.Debug("update refused", "update_id", update.UpdateID, "chat_id", request.ChatID)
+			return nil
+		}
+	}
 
 	err := store.InTx(ctx, b.pool, func(q *db.Queries) error {
 		rows, err := q.MarkUpdateProcessed(ctx, update.UpdateID)

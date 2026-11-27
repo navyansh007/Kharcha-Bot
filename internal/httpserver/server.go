@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"golang.org/x/time/rate"
 
 	"github.com/navyansh007/kharcha-bot/internal/upi"
 )
@@ -19,6 +20,8 @@ const (
 	maxBodyBytes    = 1 << 20
 	shutdownTimeout = 15 * time.Second
 	readyTimeout    = 3 * time.Second
+	readyInterval   = 30 * time.Minute
+	readyBurst      = 3
 )
 
 // Options selects the routes served by NewHandler. Nil routes are not registered.
@@ -44,23 +47,27 @@ func NewHandler(opts Options) http.Handler {
 	r.Use(recoverPanics(opts.Logger))
 	r.Use(middleware.RequestSize(maxBodyBytes))
 
+	failures := rate.NewLimiter(rate.Every(time.Second), 20)
+
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})
 	if opts.Ready != nil {
-		r.Get("/readyz", readyHandler(opts.Ready, opts.Logger))
+		checks := rate.NewLimiter(rate.Every(readyInterval), readyBurst)
+		r.With(limit(checks)).Get("/readyz", readyHandler(opts.Ready, opts.Logger))
 	}
 	if opts.Metrics != nil {
 		r.Method(http.MethodGet, "/metrics", opts.Metrics)
 	}
 	if wh := opts.Webhook; wh != nil {
-		r.Post("/webhook/{token}", wh.handler(opts.Logger))
+		r.Post("/webhook/{token}", wh.handler(opts.Logger, failures))
 	}
 	if opts.Pay != nil {
-		r.Get("/pay/{token}", payHandler(opts.Pay, opts.Logger))
+		pages := rate.NewLimiter(5, 20)
+		r.With(limit(pages)).Get("/pay/{token}", payHandler(opts.Pay, opts.Logger))
 	}
 	if c := opts.Cron; c != nil {
-		r.Post("/cron/{job}", c.handler(opts.Logger))
+		r.Post("/cron/{job}", c.handler(opts.Logger, failures))
 	}
 	return r
 }

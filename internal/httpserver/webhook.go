@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/time/rate"
 
 	"github.com/navyansh007/kharcha-bot/internal/telegram"
 )
@@ -32,14 +33,14 @@ type Webhook struct {
 	Updates   UpdateHandler
 }
 
-func (wh Webhook) handler(logger *slog.Logger) http.HandlerFunc {
+func (wh Webhook) handler(logger *slog.Logger, failures *rate.Limiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !secretEqual(chi.URLParam(r, "token"), wh.PathToken) {
-			http.NotFound(w, r)
+			reject(w, failures, http.StatusNotFound)
 			return
 		}
 		if !secretEqual(r.Header.Get(webhookHeader), wh.Secret) {
-			w.WriteHeader(http.StatusUnauthorized)
+			reject(w, failures, http.StatusUnauthorized)
 			return
 		}
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"golang.org/x/time/rate"
 )
 
 func logRequests(logger *slog.Logger) func(http.Handler) http.Handler {
@@ -24,6 +25,25 @@ func logRequests(logger *slog.Logger) func(http.Handler) http.Handler {
 			)
 		})
 	}
+}
+
+func limit(limiter *rate.Limiter) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if !limiter.Allow() {
+				w.WriteHeader(http.StatusTooManyRequests)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func reject(w http.ResponseWriter, failures *rate.Limiter, status int) {
+	if !failures.Allow() {
+		status = http.StatusTooManyRequests
+	}
+	w.WriteHeader(status)
 }
 
 func recoverPanics(logger *slog.Logger) func(http.Handler) http.Handler {
