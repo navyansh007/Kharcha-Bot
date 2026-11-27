@@ -147,7 +147,8 @@ Delivery there is at least once.
 
 A refused update is acknowledged, so Telegram does not send it again, and the
 sender is told at most once a minute. The limits are held in memory and assume a
-single instance.
+single instance. They reset when the service restarts, which includes every wake
+from sleep, so the daily limit only holds while the service stays up.
 
 ## Testing
 
