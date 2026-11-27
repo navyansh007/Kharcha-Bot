@@ -174,9 +174,9 @@ instance.
 
 ## Deploying
 
-See [deploy/cloudrun.md](deploy/cloudrun.md) for Cloud Run with Neon.
-[deploy/render.yaml](deploy/render.yaml) is a Render blueprint; copy it to the
-repository root to use it, and run `make migrate` against the database first.
+Production runs on Render's free plan with Neon, which needs no payment card.
+See [deploy/render.md](deploy/render.md). To use Cloud Run instead, which does
+need a billing account, see [deploy/cloudrun.md](deploy/cloudrun.md).
 
 ## Known limitations
 
