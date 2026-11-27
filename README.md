@@ -1,4 +1,22 @@
-# Kharcha-Bot
+<p align="center">
+  <img src="docs/logo.svg" alt="KharchaBot logo" width="120">
+</p>
+
+<h1 align="center">KharchaBot</h1>
+
+<p align="center">
+  <a href="https://t.me/theexpensemanagementbot">Open it on Telegram</a> ·
+  <a href="https://github.com/navyansh007/Kharcha-Bot/releases/download/demo-v1/kharcha-demo-vertical.mp4">Download the demo with sound</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/navyansh007/Kharcha-Bot/releases/download/demo-v1/kharcha-demo-vertical.mp4">
+    <img src="docs/demo.gif" alt="KharchaBot demo: logging expenses, budgets, group splits and settling up" width="360">
+  </a>
+</p>
+
+The bot runs on a free plan and sleeps when idle, so the first reply after a quiet
+spell takes about a minute.
 
 A Telegram bot, written in Go, for tracking personal spending and splitting
 shared expenses without installing another app. Send `120 chai` in a private
